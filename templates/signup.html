@@ -53,8 +53,13 @@
     }
     .form-text {
         font-size: 0.875rem;
-        color: #6c757d;
         margin-top: 0.25rem;
+        transition: all 0.3s ease;
+        display: block;
+        color: #dc3545; /* Changed to red */
+    }
+    .form-text.hidden {
+        display: none;
     }
     .is-invalid {
         border-color: #dc3545;
@@ -68,7 +73,6 @@
         color: #dc3545;
         margin-left: 0.25rem;
     }
-    /* 密碼切換按鈕樣式 - 調整到欄位後方 */
     .password-toggle-container {
         position: relative;
     }
@@ -87,7 +91,6 @@
     .password-toggle:hover {
         color: #495057;
     }
-    /* Email輸入框圖標 */
     .input-icon {
         position: relative;
     }
@@ -100,9 +103,24 @@
     .input-icon input {
         padding-left: 40px;
     }
-    /* 密碼欄位右邊留空間給按鈕 */
     .password-input {
         padding-right: 40px !important;
+    }
+    .password-requirements {
+        font-size: 0.9rem;
+        margin-top: 0.5rem;
+    }
+    .password-requirements ul {
+        padding-left: 1.5rem;
+        margin-bottom: 0;
+    }
+    .password-requirements li {
+        margin-bottom: 0.25rem;
+        color: #dc3545;
+        transition: all 0.3s ease;
+    }
+    .password-requirements li.requirement-met {
+        display: none;
     }
 </style>
 {% endblock %}
@@ -132,12 +150,10 @@
             <div class="input-icon">
                 <i class="fas fa-user"></i>
                 <input type="text" name="username" class="form-control {% if form.username.errors %}is-invalid{% endif %}" 
-                       id="id_username" placeholder="請輸入您的帳號" required
+                       id="id_username" placeholder="請輸入3~150個字元的帳號" required
                        value="{% if form.username.value %}{{ form.username.value }}{% endif %}">
             </div>
-            {% if form.username.help_text %}
-            <small class="form-text">{{ form.username.help_text }}</small>
-            {% endif %}
+            <div id="username-help" class="form-text">必填。3~150個字元以內。僅允許字母、數字和 @/./+/-/_ 符號。</div>
             {% for error in form.username.errors %}
             <div class="invalid-feedback">{{ error }}</div>
             {% endfor %}
@@ -177,9 +193,14 @@
                     <i class="fas fa-eye"></i>
                 </button>
             </div>
-            {% if form.password1.help_text %}
-            <small class="form-text">{{ form.password1.help_text }}</small>
-            {% endif %}
+            <div class="password-requirements">
+                <ul id="password-requirements-list">
+                    <li id="req-length">您的密碼必須至少包含8個字元</li>
+                    <li id="req-common">您的密碼不能是常見的密碼</li>
+                    <li id="req-numeric">您的密碼不能完全是數字</li>
+                    <li id="req-similar">您的密碼不能與其他個人資訊過於相似</li>
+                </ul>
+            </div>
             {% for error in form.password1.errors %}
             <div class="invalid-feedback">{{ error }}</div>
             {% endfor %}
@@ -200,9 +221,7 @@
                     <i class="fas fa-eye"></i>
                 </button>
             </div>
-            {% if form.password2.help_text %}
-            <small class="form-text">{{ form.password2.help_text }}</small>
-            {% endif %}
+            <div id="password2-help" class="form-text">請再次輸入相同的密碼以確認</div>
             {% for error in form.password2.errors %}
             <div class="invalid-feedback">{{ error }}</div>
             {% endfor %}
@@ -239,9 +258,8 @@
 </div>
 
 <script>
-    // 密碼可視化切換功能
     document.addEventListener('DOMContentLoaded', function() {
-        // 切換密碼可見性函數
+        // 密碼可視化切換功能
         function setupPasswordToggle(toggleId, inputId) {
             const toggleBtn = document.querySelector(toggleId);
             const passwordInput = document.querySelector(inputId);
@@ -251,7 +269,6 @@
                 const type = passwordInput.getAttribute('type') === 'password' ? 'text' : 'password';
                 passwordInput.setAttribute('type', type);
                 
-                // 切換眼睛圖標
                 if (type === 'text') {
                     icon.classList.remove('fa-eye');
                     icon.classList.add('fa-eye-slash');
@@ -262,9 +279,84 @@
             });
         }
         
-        // 為兩個密碼欄位設置切換功能
         setupPasswordToggle('#togglePassword1', '#id_password1');
         setupPasswordToggle('#togglePassword2', '#id_password2');
+
+        // 帳號欄位驗證
+        const usernameInput = document.getElementById('id_username');
+        const usernameHelp = document.getElementById('username-help');
+        const usernameRegex = /^[a-zA-Z0-9@.+_-]+$/;
+        
+        usernameInput.addEventListener('input', function() {
+            const isValid = this.value.length >= 3 && 
+                          this.value.length <= 150 && 
+                          usernameRegex.test(this.value);
+            
+            if (isValid) {
+                usernameHelp.classList.add('hidden');
+            } else {
+                usernameHelp.classList.remove('hidden');
+            }
+        });
+
+        // 密碼強度驗證
+        const passwordInput = document.getElementById('id_password1');
+        
+        passwordInput.addEventListener('input', function() {
+            const password = this.value;
+            const username = document.getElementById('id_username').value;
+            const email = document.getElementById('id_email').value.split('@')[0];
+            const personalInfo = [username, email].filter(Boolean);
+            
+            // 檢查密碼長度
+            if (password.length >= 8) {
+                document.getElementById('req-length').classList.add('requirement-met');
+            } else {
+                document.getElementById('req-length').classList.remove('requirement-met');
+            }
+            
+            // 檢查是否常見密碼
+            const commonPasswords = ['password', '12345678', 'qwerty', 'abc123', 'password1', 'iloveyou'];
+            if (password.length > 0 && !commonPasswords.includes(password.toLowerCase())) {
+                document.getElementById('req-common').classList.add('requirement-met');
+            } else {
+                document.getElementById('req-common').classList.remove('requirement-met');
+            }
+            
+            // 檢查是否全是數字
+            if (password.length > 0 && !/^\d+$/.test(password)) {
+                document.getElementById('req-numeric').classList.add('requirement-met');
+            } else {
+                document.getElementById('req-numeric').classList.remove('requirement-met');
+            }
+            
+            // 檢查是否與個人資訊相似
+            if (password.length > 0 && !personalInfo.some(info => 
+                info && password.toLowerCase().includes(info.toLowerCase()))) {
+                document.getElementById('req-similar').classList.add('requirement-met');
+            } else {
+                document.getElementById('req-similar').classList.remove('requirement-met');
+            }
+        });
+
+        // 密碼確認驗證
+        const password1Input = document.getElementById('id_password1');
+        const password2Input = document.getElementById('id_password2');
+        const password2Help = document.getElementById('password2-help');
+        
+        function validatePasswordConfirm() {
+            const isValid = password2Input.value === password1Input.value && 
+                          password2Input.value.length > 0;
+            
+            if (isValid) {
+                password2Help.classList.add('hidden');
+            } else {
+                password2Help.classList.remove('hidden');
+            }
+        }
+        
+        password1Input.addEventListener('input', validatePasswordConfirm);
+        password2Input.addEventListener('input', validatePasswordConfirm);
     });
 </script>
 {% endblock %}
