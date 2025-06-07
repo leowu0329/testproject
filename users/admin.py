@@ -93,9 +93,12 @@ class ProfileAdmin(ImportExportModelAdmin):
     search_fields = ['user__email', 'user__username', 'work_area']
     resource_class = ProfileResource
     
-    # 定義匯出/匯入的欄位集
+    # 修正後的 fieldsets，移除非可編輯欄位
     fieldsets = (
         (None, {'fields': ('user',)}),
         ('Profile Info', {'fields': ('role', 'work_area')}),
-        ('Metadata', {'fields': ('created_at', 'updated_at')}),
+        # 移除了包含 created_at 和 updated_at 的部分
     )
+    
+    # 如果需要顯示這些欄位但不允許編輯，可以使用 readonly_fields
+    readonly_fields = ('created_at', 'updated_at')
